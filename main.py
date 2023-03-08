@@ -15,8 +15,6 @@ class User(db.Model):
   contactNo = db.Column(db.Integer, unique=True, nullable=False)
   DOB = db.Column(db.Date, unique=False, nullable=False)
   pw =  db.Column(db.String(20), unique=False, nullable=False)
-  def __repr__(self):
-    return f"{self.userName} - {self.contactNo} - {self.DOB}"
 
 class Friends(db.Model):
   id = db.Column(db.Integer, primary_key=True)
@@ -26,6 +24,13 @@ class Friends(db.Model):
 class Sessions(db.Model):
   id = db.Column(db.Integer, primary_key=True)
   userName = db.Column(db.String(30),unique=True, nullable=False)
+
+class PersonalChats(db.Model):
+  id = db.Column(db.Integer, primary_key=True)
+  sender = db.Column(db.String(30),unique=False, nullable=False)
+  receiver = db.Column(db.String(30),unique=False, nullable=False)
+  dateTime = db.Column(db.String(40), unique=False, nullable=False)
+  msg = db.Column(db.String(100),unique=False, nullable=False)
 
 @app.route("/getfriends/<userName>")
 def getfriends(userName):
@@ -96,7 +101,6 @@ def deleteuser(userName):
   user  = User.query.get(userName)
   Friends.query.filter_by(userName = userName).delete()
   Friends.query.filter_by(friendName = userName).delete()
-
   if user is None:
     return {"error":"not found"}
   db.session.delete(user)
@@ -129,6 +133,27 @@ def sessionValidation(userName, sessionId):
   if(session and session.userName == userName):
     return {"message":"success"}
   return {"message":"Session expired"}
+
+@app.route("/sendPersonalChat", methods=['POST'])
+def sendPersonalChat():
+  current_time = datetime.now()
+  pChat = PersonalChats(sender=request.json['sender'],receiver=request.json['receiver'],msg=request.json['msg'],dateTime=str(current_time))
+  db.session.add(pChat)
+  db.session.commit()
+  return {'message': "sent"}
+
+@app.route("/getPersonelChats/<sender>/<receiver>")
+def getPersonelChats(sender, receiver):
+  chats = PersonalChats.query.filter_by(sender = sender, receiver = receiver).all()
+  clist = []
+  for chat in chats:
+    data = {'id':chat.id,'sender':chat.sender,'receiver':chat.receiver,'dateTime':chat.dateTime,'msg':chat.msg}
+    clist.append(data)
+  chats = PersonalChats.query.filter_by(sender = receiver, receiver = sender).all()
+  for chat in chats:
+    data = {'id':chat.id,'sender':chat.sender,'receiver':chat.receiver,'dateTime':chat.dateTime,'msg':chat.msg}
+    clist.append(data)
+  return {'chats':clist}
 
 @app.route("/")
 def hello():
